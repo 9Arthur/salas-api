@@ -1,0 +1,35 @@
+[project]
+name = "salas-api"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=5.2,<6",
+    "djangorestframework",
+    "django-environ",
+    "psycopg[binary]",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-django",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/config/wsgi.py",
+    "src/config/asgi.py",
+    "src/config/settings/prod.py",
+]
