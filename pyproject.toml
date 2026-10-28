@@ -25,6 +25,13 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py313"
 src = ["src", "tests"]
+# Migração é código gerado pelo Django: fica fora do lint e do format.
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+# RUF012 acusa Meta.fields, permission_classes etc., que no Django/DRF são
+# declarações lidas pelo framework, nunca mutadas (SA-13).
+ignore = ["RUF012"]
 
 [tool.coverage.run]
 source = ["src"]
