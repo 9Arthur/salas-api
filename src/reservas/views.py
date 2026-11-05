@@ -1,5 +1,6 @@
 from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
@@ -56,6 +57,9 @@ class ReservaViewSet(ModelViewSet):
         reservas = Reserva.objects.select_related("sala", "usuario").order_by(
             "inicio", "id"
         )
+        # SA-47: o drf-spectacular chama get_queryset sem usuário ao gerar o schema.
+        if getattr(self, "swagger_fake_view", False):
+            return reservas.none()
         if self.request.user.is_staff:
             return reservas
         return reservas.filter(usuario=self.request.user)
@@ -80,6 +84,7 @@ class ReservaViewSet(ModelViewSet):
             titulo=dados.get("titulo", reserva.titulo),
         )
 
+    @extend_schema(request=None)
     @action(detail=True, methods=["post"])
     def cancelar(self, request, pk=None):
         reserva = cancelar_reserva(self.get_object(), por=request.user)
