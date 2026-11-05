@@ -30,6 +30,12 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **SA-27** — `TsTzRange` declarada como `Func` em `reservas/models.py`, com os limites padrão `[)` do `tstzrange`: o fim é aberto, então a reserva que termina às 11h e a que começa às 11h não se sobrepõem. A migração `0003` usa a classe por esse caminho (`reservas.models.TsTzRange`); movê-la ou renomeá-la quebra a importação da `0003`.
 - **SA-28** — `status` sem `max_length`, como na ficha: o PostgreSQL aceita `varchar` sem limite, e as `choices` restringem os valores na validação.
 - **SA-29** — `usuario` sem `related_name`, como na ficha: o acesso reverso fica com o nome padrão do Django (`reserva_set`).
+- **SA-30** — Sobreposição tratada no serviço pela própria constraint em vez de consulta prévia: `criar_reserva` grava dentro de `transaction.atomic()` e traduz a violação da `reserva_sem_sobreposicao` em erro de validação; qualquer outro `IntegrityError` sobe. Uma consulta antes do `INSERT` repetiria a regra e deixaria aberta a janela da corrida entre a consulta e a gravação.
+- **SA-31** — O serviço levanta o `ValidationError` do DRF, com dicionário de listas, em vez do `ValidationError` do Django: é a exceção que o DRF responde como 400 com o próprio dicionário.
+- **SA-32** — Regras conferidas em ordem fixa, parando na primeira: sala ativa, fim depois do início, início fora do passado, duração mínima, duração máxima e, por último, a sobreposição, que custa um `INSERT`. Cada erro aponta uma causa só.
+- **SA-33** — Fronteiras inclusivas: começar exatamente agora, durar exatamente 15 minutos ou exatamente 8 horas é permitido; o que a ficha proíbe é o passado, menos de 15 minutos e mais de 8 horas.
+- **SA-34** — Erros por campo (`sala`, `inicio`, `fim`) e a sobreposição em `non_field_errors`, a chave do DRF para erro que não pertence a um campo: ela depende da sala e do horário juntos.
+- **SA-35** — O "agora" vem de `timezone.now()`, que os testes trocam pelo `monkeypatch` do pytest, em vez do `freezegun` da ficha: nenhuma dependência nova (SA-3), e a resolução do `freezegun` trazia um pacote publicado poucos dias antes.
 
 ## Lacunas da ficha
 
@@ -37,3 +43,4 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **L-2** — Sem endpoint de logout: o token vive no banco, e revogar é apagar a linha (SA-11).
 - **L-3** — `GET /api/salas/{id}/` existe, embora a ficha só liste a coleção: vem com o viewset e usa o mesmo filtro da listagem, então sala inativa dá 404 para usuário comum sem revelar que existe.
 - **L-4** — Admin vê as salas inativas na listagem; usuário comum, só as ativas: sem isso, uma sala desativada sumiria da API para quem pode reativá-la.
+- **L-5** — Sala inativa não aceita reserva: sem isso, uma sala que a API esconde do usuário comum (L-3, L-4) ainda poderia ser reservada pelo id.
