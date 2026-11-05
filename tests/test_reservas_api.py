@@ -297,9 +297,10 @@ def test_sa_36_put_e_delete_dao_405(cliente_a, usuario_a, sala_a):
 
 
 @pytest.mark.django_db
-def test_sa_40_filtro_por_sala(cliente_a, usuario_a, sala_a, sala_b):
+def test_sa_40_filtro_por_sala(cliente_a, usuario_a, usuario_b, sala_a, sala_b):
     ra = _reserva(usuario_a, sala_a, _em(10), _em(11))
     _reserva(usuario_a, sala_b, _em(10), _em(11))
+    _reserva(usuario_b, sala_a, _em(14), _em(15))
 
     resp = cliente_a.get(URL, {"sala": sala_a.id})
 
@@ -366,3 +367,17 @@ def test_sa_42_apagar_sala_com_reserva_da_409(cliente_admin, usuario_a, sala_a):
         "detail": "Sala com reservas não pode ser apagada; desative-a."
     }
     assert Sala.objects.filter(pk=sala_a.pk).exists()
+
+
+@pytest.mark.django_db
+def test_sa_40_data_do_filtro_e_a_do_fuso_do_projeto(cliente_a, usuario_a, sala_a):
+    # 1h UTC do dia 5 são 22h do dia 4 em America/Sao_Paulo (TIME_ZONE).
+    r = _reserva(usuario_a, sala_a, _em(1, dia=5), _em(2, dia=5))
+
+    resp = cliente_a.get(URL, {"de": "2027-01-04", "ate": "2027-01-04"})
+    assert resp.status_code == 200
+    assert [item["id"] for item in resp.data] == [r.id]
+
+    resp = cliente_a.get(URL, {"de": "2027-01-05", "ate": "2027-01-05"})
+    assert resp.status_code == 200
+    assert [item["id"] for item in resp.data] == []
