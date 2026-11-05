@@ -47,6 +47,9 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **SA-44** — Alteração pelo serviço `alterar_reserva`, com a mesma validação de horário e a mesma gravação (e a mesma tradução da sobreposição) da criação: a regra existe num lugar só.
 - **SA-45** — Na alteração, horário igual ao atual não passa pelas regras de horário, o que permite corrigir o título de uma reserva já começada; horário novo passa pela cadeia inteira da criação, inclusive "não no passado", e por isso uma reserva em andamento não pode ser estendida.
 - **SA-46** — Mover a reserva por cima da própria faixa antiga grava: o `UPDATE` é na mesma linha, e a exclusão compara com as outras linhas.
+- **SA-47** — Documentação OpenAPI gerada pelo `drf-spectacular`, em `/api/schema/` (YAML; JSON com `?format=json`) e `/api/docs/` (Swagger), públicas, em vez de documentação escrita à mão: o schema sai do próprio código e não envelhece. A ação `cancelar` é declarada sem corpo (`extend_schema(request=None)`), e o `get_queryset` de reservas devolve uma queryset vazia quando o drf-spectacular gera o schema sem usuário (`swagger_fake_view`); sem isso, os filtros sumiam da documentação. Um teste exige a geração sem avisos.
+- **SA-48** — A listagem de reservas mostra `sala_nome` e `usuario_username`, com `select_related("sala", "usuario")` no queryset, em vez de só os ids: o nome é o que o cliente exibe, e o `JOIN` mantém a listagem em duas consultas (token e reservas) com qualquer número de reservas. O teste compara 1 e 3 reservas; sem o `select_related`, a contagem cresce com a lista (2 + 2n).
+- **SA-49** — `alterar_reserva` e `cancelar_reserva` releem a reserva com `select_for_update()` dentro de `transaction.atomic()` e gravam só as próprias colunas (`update_fields`), em vez de confiar na instância que a view leu: entre a leitura e a gravação, um cancelamento concorrente seria desfeito pelo `save()` de todas as colunas. Com a trava, a segunda operação espera a primeira e relê o estado.
 
 ## Lacunas da ficha
 
@@ -58,3 +61,7 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **L-6** — `GET /api/reservas/{id}/` existe, embora a ficha só liste a coleção: dono ou admin; reserva de outro dá 404, como na L-3.
 - **L-7** — Reserva cancelada não pode ser alterada.
 - **L-8** — O `PATCH` não troca a sala (a ficha fala em horário e título): na alteração a `sala` é só leitura, e o valor do corpo é ignorado.
+- **L-9** — Em `cancelar_reserva(reserva, por)`, o `por` decide a permissão no próprio serviço (dono ou admin; os outros recebem 403), e o modelo não guarda quem cancelou. Pela API, reserva de outro dá 404 antes (SA-37).
+- **L-10** — Cancelar reserva já cancelada dá 400 ("Reserva já cancelada.") em vez de 200 idempotente. A permissão é conferida antes do status.
+- **L-11** — Reserva terminada (fim até o momento atual) não pode ser cancelada; a que está em andamento pode, e libera o resto da faixa.
+- **L-12** — `POST /api/reservas/{id}/cancelar/` responde 200 com a reserva (`status` `CANCELADA`) em vez de 204: a reserva continua existindo, só mudou de estado.
