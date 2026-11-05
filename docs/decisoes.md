@@ -25,6 +25,11 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **SA-22** — Listagem de salas ordenada por nome (`Meta.ordering`) em vez da ordem de inserção: resposta determinística e testes estáveis.
 - **SA-23** — `SimpleRouter` em vez de `DefaultRouter`: o `DefaultRouter` publica uma raiz navegável em `/api/` que ninguém usa e que seria mais uma rota a fechar.
 - **SA-24** — Um app só (`reservas`) para salas e reservas em vez de um por modelo: o serviço, as permissões e os filtros da ficha formam uma camada só, e a `Reserva` depende da `Sala`.
+- **SA-25** — Sobreposição barrada no banco por `ExclusionConstraint` (`reserva_sem_sobreposicao`: mesma sala, faixas que se cruzam, só reservas `CONFIRMADA`) em vez de só no Python: a validação em Python roda em cada requisição isolada, e duas reservas simultâneas para o mesmo horário passariam pelas duas; o banco decide. A constraint compara a sala com `=` num índice GiST, que precisa da extensão `btree_gist`, criada numa migração própria (`0002`) da qual a `0003` da `Reserva` depende.
+- **SA-26** — `CheckConstraint` `reserva_fim_apos_inicio` (fim estritamente depois do início) com `condition=` em vez do `check=` da ficha, obsoleto no Django 5.2. A desigualdade estrita importa: uma reserva de duração zero vira a faixa vazia, que não sobrepõe nada, e a exclusão não a barraria; só a `CHECK` barra.
+- **SA-27** — `TsTzRange` declarada como `Func` em `reservas/models.py`, com os limites padrão `[)` do `tstzrange`: o fim é aberto, então a reserva que termina às 11h e a que começa às 11h não se sobrepõem. A migração `0003` usa a classe por esse caminho (`reservas.models.TsTzRange`); movê-la ou renomeá-la quebra a importação da `0003`.
+- **SA-28** — `status` sem `max_length`, como na ficha: o PostgreSQL aceita `varchar` sem limite, e as `choices` restringem os valores na validação.
+- **SA-29** — `usuario` sem `related_name`, como na ficha: o acesso reverso fica com o nome padrão do Django (`reserva_set`).
 
 ## Lacunas da ficha
 
