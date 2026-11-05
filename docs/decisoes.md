@@ -36,6 +36,17 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **SA-33** — Fronteiras inclusivas: começar exatamente agora, durar exatamente 15 minutos ou exatamente 8 horas é permitido; o que a ficha proíbe é o passado, menos de 15 minutos e mais de 8 horas.
 - **SA-34** — Erros por campo (`sala`, `inicio`, `fim`) e a sobreposição em `non_field_errors`, a chave do DRF para erro que não pertence a um campo: ela depende da sala e do horário juntos.
 - **SA-35** — O "agora" vem de `timezone.now()`, que os testes trocam pelo `monkeypatch` do pytest, em vez do `freezegun` da ficha: nenhuma dependência nova (SA-3), e a resolução do `freezegun` trazia um pacote publicado poucos dias antes.
+- **SA-36** — Reservas pelo `ReservaViewSet` sem `PUT` e sem `DELETE` (`http_method_names`): a ficha prevê só alteração parcial, e o `DELETE` apagaria a reserva em vez de cancelá-la.
+- **SA-37** — Admin vê todas as reservas; o usuário comum, só as suas, pelo `get_queryset`: reserva de outro dá 404 no detalhe e na alteração, sem revelar que existe.
+- **SA-38** — `EhDonoOuAdmin` (`permissions.py`) como permissão de objeto, declarada na view junto com o `IsAuthenticated`: o filtro do queryset decide o que existe para cada usuário, e a permissão decide o que ele pode fazer com o objeto. Como o queryset já filtra, a negação dela não aparece pela API; um teste direto da classe cobre os dois lados.
+- **SA-39** — Na criação, o serializer valida os tipos, com `sala` entre todas as salas, e a view chama `criar_reserva` com o usuário da requisição; `usuario` e `status` são só leitura, então o usuário do corpo é ignorado. Com todas as salas no serializer, a regra da sala inativa fica só no serviço (L-5).
+- **SA-40** — Filtros com `django-filter`, só na view de reservas: `sala` pelo id e `de`/`ate` como datas aplicadas à data do início no fuso do projeto; data inválida dá 400.
+- **SA-41** — Listagem de reservas ordenada por início e depois por id: resposta determinística, como na SA-22.
+- **SA-42** — Apagar sala com reserva responde 409 ("desative em vez de apagar") em vez do 500 que o `PROTECT` causaria.
+- **SA-43** — As regras de horário são testadas no serviço; pela API, só a tradução do erro em 400 (passado e sobreposição) e o que é da própria API (título vazio, sala inativa, permissões, filtros).
+- **SA-44** — Alteração pelo serviço `alterar_reserva`, com a mesma validação de horário e a mesma gravação (e a mesma tradução da sobreposição) da criação: a regra existe num lugar só.
+- **SA-45** — Na alteração, horário igual ao atual não passa pelas regras de horário, o que permite corrigir o título de uma reserva já começada; horário novo passa pela cadeia inteira da criação, inclusive "não no passado", e por isso uma reserva em andamento não pode ser estendida.
+- **SA-46** — Mover a reserva por cima da própria faixa antiga grava: o `UPDATE` é na mesma linha, e a exclusão compara com as outras linhas.
 
 ## Lacunas da ficha
 
@@ -44,3 +55,6 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **L-3** — `GET /api/salas/{id}/` existe, embora a ficha só liste a coleção: vem com o viewset e usa o mesmo filtro da listagem, então sala inativa dá 404 para usuário comum sem revelar que existe.
 - **L-4** — Admin vê as salas inativas na listagem; usuário comum, só as ativas: sem isso, uma sala desativada sumiria da API para quem pode reativá-la.
 - **L-5** — Sala inativa não aceita reserva: sem isso, uma sala que a API esconde do usuário comum (L-3, L-4) ainda poderia ser reservada pelo id.
+- **L-6** — `GET /api/reservas/{id}/` existe, embora a ficha só liste a coleção: dono ou admin; reserva de outro dá 404, como na L-3.
+- **L-7** — Reserva cancelada não pode ser alterada.
+- **L-8** — O `PATCH` não troca a sala (a ficha fala em horário e título): na alteração a `sala` é só leitura, e o valor do corpo é ignorado.
