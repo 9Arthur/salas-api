@@ -104,4 +104,9 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "salas-api",
     "DESCRIPTION": "API de reserva de salas de reunião.",
     "VERSION": "1.0.0",
+    # Swagger UI em versão fixa (mais de 14 dias no npm), e não no @latest do padrão.
+    "SWAGGER_UI_DIST": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.34.0",
+    "SWAGGER_UI_FAVICON_HREF": (
+        "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.34.0/favicon-32x32.png"
+    ),
 }

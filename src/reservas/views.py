@@ -75,13 +75,9 @@ class ReservaViewSet(ModelViewSet):
         return ReservaSerializer
 
     def perform_update(self, serializer):
-        reserva = serializer.instance
-        dados = serializer.validated_data
+        # SA-49: só o que veio no corpo; o serviço completa o resto sob a trava.
         serializer.instance = alterar_reserva(
-            reserva,
-            inicio=dados.get("inicio", reserva.inicio),
-            fim=dados.get("fim", reserva.fim),
-            titulo=dados.get("titulo", reserva.titulo),
+            serializer.instance, **serializer.validated_data
         )
 
     @extend_schema(request=None)
