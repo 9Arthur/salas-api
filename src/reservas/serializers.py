@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 
-from reservas.models import Sala
+from reservas.models import Reserva, Sala
 
 
 class SalaSerializer(serializers.ModelSerializer):
@@ -27,3 +27,19 @@ class SalaSerializer(serializers.ModelSerializer):
                 "error_messages": {"min_value": "A capacidade deve ser no mínimo 1."},
             }
         }
+
+
+class ReservaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reserva
+        fields = [
+            "id",
+            "sala",
+            "usuario",
+            "inicio",
+            "fim",
+            "titulo",
+            "status",
+            "criada_em",
+        ]
+        read_only_fields = ["usuario", "status", "criada_em"]
