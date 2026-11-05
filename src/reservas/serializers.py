@@ -43,3 +43,8 @@ class ReservaSerializer(serializers.ModelSerializer):
             "criada_em",
         ]
         read_only_fields = ["usuario", "status", "criada_em"]
+
+
+class ReservaAlteracaoSerializer(ReservaSerializer):
+    class Meta(ReservaSerializer.Meta):
+        read_only_fields = ["sala", "usuario", "status", "criada_em"]

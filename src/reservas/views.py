@@ -7,8 +7,12 @@ from rest_framework.viewsets import ModelViewSet
 from reservas.filters import ReservaFilter
 from reservas.models import Reserva, Sala
 from reservas.permissions import EhDonoOuAdmin
-from reservas.serializers import ReservaSerializer, SalaSerializer
-from reservas.services import criar_reserva
+from reservas.serializers import (
+    ReservaAlteracaoSerializer,
+    ReservaSerializer,
+    SalaSerializer,
+)
+from reservas.services import alterar_reserva, criar_reserva
 
 
 class SalaComReservas(APIException):
@@ -44,7 +48,7 @@ class ReservaViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, EhDonoOuAdmin]
     filter_backends = [DjangoFilterBackend]
     filterset_class = ReservaFilter
-    http_method_names = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
         reservas = Reserva.objects.order_by("inicio", "id")
@@ -55,4 +59,19 @@ class ReservaViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.instance = criar_reserva(
             usuario=self.request.user, **serializer.validated_data
+        )
+
+    def get_serializer_class(self):
+        if self.action == "partial_update":
+            return ReservaAlteracaoSerializer
+        return ReservaSerializer
+
+    def perform_update(self, serializer):
+        reserva = serializer.instance
+        dados = serializer.validated_data
+        serializer.instance = alterar_reserva(
+            reserva,
+            inicio=dados.get("inicio", reserva.inicio),
+            fim=dados.get("fim", reserva.fim),
+            titulo=dados.get("titulo", reserva.titulo),
         )
