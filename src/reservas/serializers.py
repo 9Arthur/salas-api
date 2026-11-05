@@ -30,12 +30,17 @@ class SalaSerializer(serializers.ModelSerializer):
 
 
 class ReservaSerializer(serializers.ModelSerializer):
+    sala_nome = serializers.CharField(source="sala.nome", read_only=True)
+    usuario_username = serializers.CharField(source="usuario.username", read_only=True)
+
     class Meta:
         model = Reserva
         fields = [
             "id",
             "sala",
+            "sala_nome",
             "usuario",
+            "usuario_username",
             "inicio",
             "fim",
             "titulo",

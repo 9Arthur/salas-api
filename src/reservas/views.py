@@ -53,7 +53,9 @@ class ReservaViewSet(ModelViewSet):
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
-        reservas = Reserva.objects.order_by("inicio", "id")
+        reservas = Reserva.objects.select_related("sala", "usuario").order_by(
+            "inicio", "id"
+        )
         if self.request.user.is_staff:
             return reservas
         return reservas.filter(usuario=self.request.user)
