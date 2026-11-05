@@ -1,7 +1,9 @@
 from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from reservas.filters import ReservaFilter
@@ -12,7 +14,7 @@ from reservas.serializers import (
     ReservaSerializer,
     SalaSerializer,
 )
-from reservas.services import alterar_reserva, criar_reserva
+from reservas.services import alterar_reserva, cancelar_reserva, criar_reserva
 
 
 class SalaComReservas(APIException):
@@ -75,3 +77,8 @@ class ReservaViewSet(ModelViewSet):
             fim=dados.get("fim", reserva.fim),
             titulo=dados.get("titulo", reserva.titulo),
         )
+
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None):
+        reserva = cancelar_reserva(self.get_object(), por=request.user)
+        return Response(self.get_serializer(reserva).data)
