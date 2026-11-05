@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from reservas.models import Reserva
 
@@ -20,17 +20,41 @@ def criar_reserva(usuario, sala, inicio, fim, titulo):
     )
 
 
-def alterar_reserva(reserva, inicio, fim, titulo):
-    if reserva.status == Reserva.Status.CANCELADA:
-        raise ValidationError(
-            {"non_field_errors": ["Reserva cancelada não pode ser alterada."]}
-        )
-    if (inicio, fim) != (reserva.inicio, reserva.fim):
-        _validar_horario(reserva.sala, inicio, fim)
-    reserva.inicio = inicio
-    reserva.fim = fim
-    reserva.titulo = titulo
-    _gravar(reserva.save)
+def alterar_reserva(reserva, *, inicio=None, fim=None, titulo=None):
+    with transaction.atomic():
+        # SA-49: relê e trava a linha; a instância recebida pode estar velha, e o
+        # campo que não veio na alteração sai da linha relida.
+        reserva = Reserva.objects.select_for_update().get(pk=reserva.pk)
+        if reserva.status == Reserva.Status.CANCELADA:
+            raise ValidationError(
+                {"non_field_errors": ["Reserva cancelada não pode ser alterada."]}
+            )
+        inicio = reserva.inicio if inicio is None else inicio
+        fim = reserva.fim if fim is None else fim
+        titulo = reserva.titulo if titulo is None else titulo
+        if (inicio, fim) != (reserva.inicio, reserva.fim):
+            _validar_horario(reserva.sala, inicio, fim)
+        reserva.inicio = inicio
+        reserva.fim = fim
+        reserva.titulo = titulo
+        _gravar(lambda: reserva.save(update_fields=["inicio", "fim", "titulo"]))
+    return reserva
+
+
+def cancelar_reserva(reserva, por):
+    with transaction.atomic():
+        # SA-49: relê e trava a linha; grava só o status.
+        reserva = Reserva.objects.select_for_update().get(pk=reserva.pk)
+        if not (por.is_staff or reserva.usuario_id == por.id):
+            raise PermissionDenied("Só o dono da reserva ou um admin pode cancelá-la.")
+        if reserva.status == Reserva.Status.CANCELADA:
+            raise ValidationError({"non_field_errors": ["Reserva já cancelada."]})
+        if reserva.fim <= timezone.now():
+            raise ValidationError(
+                {"non_field_errors": ["Reserva já terminada não pode ser cancelada."]}
+            )
+        reserva.status = Reserva.Status.CANCELADA
+        reserva.save(update_fields=["status"])
     return reserva
 
 

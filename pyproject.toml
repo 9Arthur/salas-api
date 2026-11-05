@@ -8,6 +8,7 @@ dependencies = [
     "django-environ",
     "psycopg[binary]",
     "django-filter>=26.2",
+    "drf-spectacular>=0.30.0",
 ]
 
 [dependency-groups]
