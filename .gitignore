@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Estáticos do collectstatic do settings de produção (SA-51)
+staticfiles/
