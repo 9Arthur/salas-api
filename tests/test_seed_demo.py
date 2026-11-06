@@ -75,3 +75,24 @@ def test_sa_55_demo_do_seed_faz_login_pela_api(client):
 
     assert resposta.status_code == 200
     assert set(resposta.json()) == {"token"}
+
+
+@pytest.mark.django_db
+def test_sa_55_seed_demo_acha_a_sala_em_outra_caixa_e_nao_mexe_no_resto():
+    # O índice único é Lower(nome): "SALA AZUL" é a mesma sala da demonstração.
+    Sala.objects.create(nome="SALA AZUL", capacidade=2, ativa=False)
+    Sala.objects.create(nome="Sala Extra", capacidade=3, ativa=False)
+    get_user_model().objects.create_user(
+        username="outra", email="outra@exemplo.com", password="Senha-de-teste-123"
+    )
+
+    saida = _seed()
+
+    assert saida == "seed_demo: 3 salas (2 criadas) e o usuário demo (criado).\n"
+    assert _salas() == [
+        ("Auditório", 40, True),
+        ("Sala Azul", 6, True),
+        ("Sala Extra", 3, False),
+        ("Sala Verde", 10, True),
+    ]
+    assert get_user_model().objects.filter(username="outra").exists()

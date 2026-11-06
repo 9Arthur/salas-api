@@ -1,4 +1,7 @@
+import os
 import re
+import subprocess
+import sys
 from operator import ne
 
 import pytest
@@ -15,6 +18,7 @@ from config.settings import base, prod
 CHAVE_DE_TESTE = "chave-de-teste-do-check-deploy-sem-uso-em-producao-0123456789"
 WHITENOISE = "whitenoise.middleware.WhiteNoiseMiddleware"
 SEGURANCA = "django.middleware.security.SecurityMiddleware"
+MENSAGEM_DE_ERRO = "Internal Server Error: /teste-e08/"
 
 
 def _producao():
@@ -40,7 +44,7 @@ def test_sa_51_prod_poe_o_whitenoise_logo_depois_da_seguranca_sem_mexer_na_base(
 
 
 def test_sa_52_check_deploy_sem_avisos_com_os_settings_de_producao():
-    hosts = ["salas-api.fly.dev"]
+    hosts = ["salas-api-9arthur.fly.dev"]
     # Contraste: com os settings dos testes, o mesmo check acusa os avisos.
     with override_settings(SECRET_KEY=CHAVE_DE_TESTE, ALLOWED_HOSTS=hosts):
         avisos_sem_prod = _avisos()
@@ -65,12 +69,15 @@ def test_sa_52_redireciona_para_https_menos_o_healthz(client, tmp_path):
         api_via_proxy = client.get("/api/salas/", HTTP_X_FORWARDED_PROTO="https")
         saude_http = client.get("/healthz/")
         saude_https = client.get("/healthz/", secure=True)
+        # Controle da âncora: só o /healthz/ exato é isento.
+        quase_saude = client.get("/healthz/x")
 
     assert api_http.status_code == 301
     assert api_http["Location"] == "https://testserver/api/salas/"
     # Atrás do proxy o pedido já é HTTPS: sem redirect, cai na autenticação.
     assert api_via_proxy.status_code == 401
     assert saude_http.status_code == 200
+    assert quase_saude.status_code == 301
     assert "Strict-Transport-Security" not in saude_http
     assert (
         saude_https["Strict-Transport-Security"]
@@ -78,7 +85,8 @@ def test_sa_52_redireciona_para_https_menos_o_healthz(client, tmp_path):
     )
 
 
-@pytest.mark.django_db  # o close() da resposta dispara o request_finished, que mexe no banco
+# django_db: o close() da resposta dispara o request_finished, que mexe no banco.
+@pytest.mark.django_db
 def test_sa_51_whitenoise_serve_o_estatico_com_hash_e_cache_longo(tmp_path):
     sem_whitenoise = _producao()
     sem_whitenoise.pop("MIDDLEWARE", None)
@@ -89,6 +97,8 @@ def test_sa_51_whitenoise_serve_o_estatico_com_hash_e_cache_longo(tmp_path):
     with override_settings(**{**_producao(), "STATIC_ROOT": tmp_path}):
         resposta_com = Client().get(url, secure=True)
         resposta_com.close()  # fecha o arquivo que o whitenoise abriu
+        resposta_gzip = Client().get(url, secure=True, HTTP_ACCEPT_ENCODING="gzip")
+        resposta_gzip.close()
 
     # O ManifestStaticFilesStorage põe 12 dígitos hexadecimais do md5 no nome.
     assert re.fullmatch(r"/static/admin/css/base\.[0-9a-f]{12}\.css", url)
@@ -96,3 +106,35 @@ def test_sa_51_whitenoise_serve_o_estatico_com_hash_e_cache_longo(tmp_path):
     assert resposta_sem.status_code == 404
     assert resposta_com.status_code == 200
     assert resposta_com["Cache-Control"] == "max-age=315360000, public, immutable"
+    # A metade "Compressed" do storage: a versão gzip foi gerada e é servida.
+    assert resposta_gzip["Content-Encoding"] == "gzip"
+
+
+def _registra_um_erro(modulo):
+    # Processo novo: o LOGGING só é aplicado no django.setup(), e trocá-lo dentro
+    # do processo dos testes mexeria no logging da suíte inteira.
+    comando = (
+        "import logging; logging.getLogger('django.request').error("
+        + repr(MENSAGEM_DE_ERRO)
+        + ")"
+    )
+    ambiente = {**os.environ, "DJANGO_SETTINGS_MODULE": modulo, "ALLOWED_HOSTS": "x"}
+    resultado = subprocess.run(
+        [sys.executable, "manage.py", "shell", "-c", comando],
+        cwd=settings.BASE_DIR,
+        env=ambiente,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=60,
+    )
+    return resultado.stderr
+
+
+def test_sa_59_prod_manda_os_erros_do_django_para_o_console():
+    # Contraste: a base também roda com DEBUG = False e não registra o erro.
+    saida_base = _registra_um_erro("config.settings.base")
+    saida_prod = _registra_um_erro("config.settings.prod")
+
+    assert MENSAGEM_DE_ERRO not in saida_base
+    assert MENSAGEM_DE_ERRO in saida_prod
