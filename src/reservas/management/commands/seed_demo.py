@@ -7,8 +7,9 @@ from reservas.models import Sala
 SALAS = [("Sala Azul", 6), ("Sala Verde", 10), ("Auditório", 40)]
 USUARIO = "demo"
 EMAIL = "demo@exemplo.com"
-# Senha pública por definição (ficha 1.7, está no README): por isso o demo é
-# sempre um usuário comum, e cada execução o rebaixa se alguém o promoveu.
+# Senha pública por definição (vai para o README como credencial de
+# demonstração): por isso o demo é sempre um usuário comum, e cada execução o
+# rebaixa se alguém o promoveu.
 SENHA = "demo1234"
 
 
@@ -19,8 +20,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         criadas = 0
         for nome, capacidade in SALAS:
+            # O índice único é Lower(nome): a busca ignora a caixa, e o nome volta
+            # à grafia da demonstração.
             _, criada = Sala.objects.update_or_create(
-                nome=nome, defaults={"capacidade": capacidade, "ativa": True}
+                nome__iexact=nome,
+                defaults={"nome": nome, "capacidade": capacidade, "ativa": True},
             )
             criadas += criada
         usuario, criado = get_user_model().objects.update_or_create(
