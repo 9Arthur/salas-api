@@ -6,8 +6,10 @@ DEBUG = False
 # original neste cabeçalho; sem isso, todo pedido pareceria HTTP (SA-52).
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = True
-# O health check do Fly chega direto na máquina, em HTTP e sem o cabeçalho:
-# com o redirect, ele receberia 301 e a máquina nunca ficaria saudável.
+# O health check do Fly chega direto na máquina, em HTTP; o fly.toml manda nele
+# o Host e o X-Forwarded-Proto (SA-58). A isenção é reserva para um check sem
+# os cabeçalhos, que com o redirect receberia 301 e nunca daria a máquina como
+# saudável.
 SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -31,4 +33,14 @@ STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },
+}
+
+# Com DEBUG = False, o logging padrão do Django só manda os erros para o
+# mail_admins, que sem ADMINS não faz nada: o traceback de um 500 sumiria. Aqui,
+# tudo de WARNING para cima vai para a saída de erro do processo (SA-59).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
 }
