@@ -1,0 +1,40 @@
+# App no Fly: máquina pequena em iad, parada quando ociosa.
+app = "salas-api-9arthur"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ALLOWED_HOSTS = "salas-api-9arthur.fly.dev"
+
+[deploy]
+  # Roda numa máquina temporária antes da troca de versão; se falhar, o deploy
+  # para e a versão anterior continua no ar (SA-54).
+  release_command = "python manage.py migrate --noinput"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # Máquina parada não roda health check, e sem consulta o Neon dorme.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/healthz/"
+
+    # O check chega direto na máquina, sem o Host do app e sem o cabeçalho do
+    # proxy; sem estes dois, o Django responderia 400 (SA-58).
+    [http_service.checks.headers]
+      Host = "salas-api-9arthur.fly.dev"
+      X-Forwarded-Proto = "https"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

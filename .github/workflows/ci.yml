@@ -32,3 +32,13 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
           SECRET_KEY: ci-nao-e-segredo
+      - name: Check de deploy
+        # O settings de produção sem nenhum aviso (SA-53); a chave é aleatória a
+        # cada execução e nunca sai do job.
+        run: |
+          SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')" \
+            uv run python manage.py check --deploy --fail-level WARNING
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+          ALLOWED_HOSTS: salas-api-9arthur.fly.dev

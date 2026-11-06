@@ -1,0 +1,21 @@
+# A imagem só precisa de pyproject.toml, uv.lock, .python-version, manage.py e
+# src/ (SA-56). O .env fica de fora para nenhum segredo entrar numa camada.
+.git
+.github
+.venv
+.env
+.env.*
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+staticfiles
+**/__pycache__
+**/*.pyc
+docs
+tests
+docker-compose.yml
+Dockerfile
+.dockerignore
+README.md
+LICENSE
