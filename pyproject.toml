@@ -42,5 +42,4 @@ source = ["src"]
 omit = [
     "src/config/wsgi.py",
     "src/config/asgi.py",
-    "src/config/settings/prod.py",
 ]
