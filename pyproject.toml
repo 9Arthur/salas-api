@@ -9,6 +9,7 @@ dependencies = [
     "psycopg[binary]",
     "django-filter>=26.2",
     "drf-spectacular>=0.30.0",
+    "gunicorn>=26.2.0",
 ]
 
 [dependency-groups]
