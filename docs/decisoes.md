@@ -9,7 +9,7 @@ A numeração acompanha os nomes dos testes (`test_sa_N_…`, `test_l_N_…`). *
 - **SA-5** — Cobertura omite `wsgi.py` e `asgi.py`: boilerplate que só executa no servidor; regra de negócio é 100% medida. O `settings/prod.py` saiu da lista quando passou a ter regras testadas (SA-52).
 - **SA-6** — `SECRET_KEY` fixa e não-secreta no CI em vez de segredo do repositório: o CI não serve tráfego; ali ela é parâmetro, não segredo.
 - **SA-7** — Postgres local publicado em `5433` em vez de `5432`: evita colisão com um Postgres nativo na máquina de desenvolvimento e torna o `docker compose up` robusto em máquina alheia. No CI a porta segue 5432 (runner limpo).
-- Imagem do Postgres no CI pelo espelho `mirror.gcr.io/library` em vez do Docker Hub: CI público compartilha IP e estoura o rate limit anônimo do Hub.
+- **SA-61** — Imagem do Postgres no CI pelo espelho `mirror.gcr.io/library` em vez do Docker Hub: CI público compartilha IP e estoura o rate limit anônimo do Hub.
 - **SA-9** — Usuário customizado (`users.User`) desde a primeira migração em vez do `auth.User`: trocar `AUTH_USER_MODEL` com tabelas já criadas exige reescrever migrações à mão. E-mail obrigatório no registro.
 - **SA-10** — Registro público em `POST /api/auth/registro/`, com os validadores de senha do Django (inclusive o de similaridade com username e e-mail); a resposta nunca devolve a senha.
 - **SA-11** — Login por username em `POST /api/auth/token/` com a `TokenAuthentication` nativa em vez de JWT: o token vive no banco, e revogar é apagar uma linha, sem lista de bloqueio. Credencial inválida responde 401 com a mesma mensagem para senha errada e usuário inexistente, para que o login não confirme quais usuários existem; corpo malformado ou campo ausente continua 400.
