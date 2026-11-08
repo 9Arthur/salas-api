@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import sys
+import tomllib
 from operator import ne
 
 import pytest
@@ -66,7 +67,7 @@ def test_sa_52_check_deploy_sem_avisos_com_os_settings_de_producao():
 def test_sa_52_redireciona_para_https_menos_o_healthz(client, tmp_path):
     with override_settings(**{**_producao(), "STATIC_ROOT": tmp_path}):
         api_http = client.get("/api/salas/")
-        api_via_proxy = client.get("/api/salas/", HTTP_X_FORWARDED_PROTO="https")
+        api_via_proxy = client.get("/api/salas/", HTTP_FLY_FORWARDED_PROTO="https")
         saude_http = client.get("/healthz/")
         saude_https = client.get("/healthz/", secure=True)
         # Controle da âncora: só o /healthz/ exato é isento.
@@ -83,6 +84,37 @@ def test_sa_52_redireciona_para_https_menos_o_healthz(client, tmp_path):
         saude_https["Strict-Transport-Security"]
         == "max-age=31536000; includeSubDomains; preload"
     )
+
+
+@pytest.mark.django_db
+def test_sa_60_so_o_fly_forwarded_proto_decide_se_o_pedido_e_https(client, tmp_path):
+    # Os quatro pedidos chegam em HTTP, como o proxy entrega à máquina; muda só o
+    # que os cabeçalhos dizem. Os pares reproduzem o eco do proxy (debug.fly.dev,
+    # 08/11): o Fly-Forwarded-Proto é sempre o do proxy; o X-Forwarded-Proto é o
+    # que o cliente mandar.
+    pedidos = (
+        {"HTTP_FLY_FORWARDED_PROTO": "https"},
+        {"HTTP_FLY_FORWARDED_PROTO": "https", "HTTP_X_FORWARDED_PROTO": "http"},
+        {"HTTP_FLY_FORWARDED_PROTO": "http", "HTTP_X_FORWARDED_PROTO": "https"},
+        {"HTTP_X_FORWARDED_PROTO": "https"},
+    )
+    with override_settings(**{**_producao(), "STATIC_ROOT": tmp_path}):
+        status = tuple(client.get("/api/salas/", **c).status_code for c in pedidos)
+
+    # 401: tratado como HTTPS, cai na autenticação; 301: redirect para https.
+    assert status == (401, 401, 301, 301)
+
+
+def test_sa_60_check_do_fly_toml_manda_o_cabecalho_que_o_prod_le():
+    with (settings.BASE_DIR / "fly.toml").open("rb") as arquivo:
+        (check,) = tomllib.load(arquivo)["http_service"]["checks"]
+
+    assert check["headers"] == {
+        "Host": "salas-api-9arthur.fly.dev",
+        "Fly-Forwarded-Proto": "https",
+    }
+    # O check não passa pelo proxy: vai à mão o mesmo cabeçalho que o Django lê.
+    assert prod.SECURE_PROXY_SSL_HEADER == ("HTTP_FLY_FORWARDED_PROTO", "https")
 
 
 # django_db: o close() da resposta dispara o request_finished, que mexe no banco.

@@ -29,10 +29,11 @@ primary_region = "iad"
     path = "/healthz/"
 
     # O check chega direto na máquina, sem o Host do app e sem o cabeçalho do
-    # proxy; sem estes dois, o Django responderia 400 (SA-58).
+    # proxy. Sem o Host, o Django responderia 400 (SA-58); o Fly-Forwarded-Proto
+    # é o mesmo que o prod.py lê, para o check chegar como o proxy entrega (SA-60).
     [http_service.checks.headers]
       Host = "salas-api-9arthur.fly.dev"
-      X-Forwarded-Proto = "https"
+      Fly-Forwarded-Proto = "https"
 
 [[vm]]
   memory = "512mb"
