@@ -9,7 +9,9 @@ A máquina fica parada quando ociosa: a primeira requisição depois de uma paus
 
 124 testes, cobertura de 99% (medida no CI da `main`).
 
-![Swagger da API em produção](docs/img/swagger.png)
+![Uso da API em produção: reserva criada (201) e a mesma faixa recusada pela constraint do banco (400)](docs/img/demo.gif)
+
+![Todas as rotas no Swagger de produção](docs/img/swagger.png)
 
 ## Como rodar
 
@@ -74,3 +76,4 @@ Limitações conhecidas, deixadas de fora de propósito:
 - F20: o log de acesso mostra o IP do proxy, não o do cliente.
 - F21: o painel `/admin/` só tem Grupos e Tokens: "admin" na API é papel (`is_staff`), não o painel.
 - F22: a imagem do Postgres no CI e no compose (`postgres:17`) usa tag móvel, ao contrário das actions do CI (SA-62).
+- F23: o schema OpenAPI não documenta as respostas 400 (o Swagger as mostra como "Undocumented").
