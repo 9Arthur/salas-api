@@ -3,13 +3,16 @@ from .base import *
 DEBUG = False
 
 # O Fly termina o TLS na borda e repassa o pedido em HTTP, marcando o protocolo
-# original neste cabeçalho; sem isso, todo pedido pareceria HTTP (SA-52).
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# original neste cabeçalho; sem isso, todo pedido pareceria HTTP (SA-52). É o
+# Fly-Forwarded-Proto, que o proxy sempre sobrescreve: o X-Forwarded-Proto ele
+# repassa como o cliente mandou, e um "http" forjado num pedido https dava 301
+# (SA-60).
+SECURE_PROXY_SSL_HEADER = ("HTTP_FLY_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = True
 # O health check do Fly chega direto na máquina, em HTTP; o fly.toml manda nele
-# o Host e o X-Forwarded-Proto (SA-58). A isenção é reserva para um check sem
-# os cabeçalhos, que com o redirect receberia 301 e nunca daria a máquina como
-# saudável.
+# o Host e o Fly-Forwarded-Proto (SA-58). A isenção é reserva para um check com o
+# Host mas sem o Fly-Forwarded-Proto, que com o redirect receberia 301 e nunca
+# daria a máquina como saudável (sem o Host, a resposta é 400, SA-58).
 SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
