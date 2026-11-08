@@ -89,9 +89,11 @@ def test_sa_52_redireciona_para_https_menos_o_healthz(client, tmp_path):
 @pytest.mark.django_db
 def test_sa_60_so_o_fly_forwarded_proto_decide_se_o_pedido_e_https(client, tmp_path):
     # Os quatro pedidos chegam em HTTP, como o proxy entrega à máquina; muda só o
-    # que os cabeçalhos dizem. Os pares reproduzem o eco do proxy (debug.fly.dev,
-    # 08/11): o Fly-Forwarded-Proto é sempre o do proxy; o X-Forwarded-Proto é o
-    # que o cliente mandar.
+    # que os cabeçalhos dizem. Os três primeiros reproduzem o eco do proxy
+    # (debug.fly.dev, 08/11): o Fly-Forwarded-Proto é sempre o do proxy; o
+    # X-Forwarded-Proto é o que o cliente mandar. O último, sem o
+    # Fly-Forwarded-Proto, não vem do proxy: é o controle contra uma
+    # implementação que aceite o X-Forwarded-Proto.
     pedidos = (
         {"HTTP_FLY_FORWARDED_PROTO": "https"},
         {"HTTP_FLY_FORWARDED_PROTO": "https", "HTTP_X_FORWARDED_PROTO": "http"},
